@@ -1,5 +1,6 @@
 # Adapted from Nixpkgs.
 
+nixpkgs:
 { config, lib, pkgs, ... }:
 
 with lib;
@@ -49,7 +50,7 @@ let
     merge = lib.mergeOneOption;
   };
 
-  _pkgs = import <nixpkgs> (
+  _pkgs = import nixpkgs (
     filterAttrs (n: v: v != null) config.nixpkgs
   );
 
