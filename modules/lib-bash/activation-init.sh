@@ -4,8 +4,24 @@ function setupVars() {
     local profilesPath="/nix/var/nix/profiles/per-user/$USER"
     local gcPath="/nix/var/nix/gcroots/per-user/$USER"
 
+    local greatestGenNum
+    
+    greatestGenNum=$( \
+        find "$profilesPath" -name 'home-manager-*-link' \
+            | sed 's/^.*-\([0-9]*\)-link$/\1/' \
+            | sort -rn \
+            | head -1)
+    
+    if [[ -n $greatestGenNum ]] ; then
+        oldGenNum=$greatestGenNum
+        newGenNum=$((oldGenNum + 1))
+    else
+        newGenNum=1
+    fi
+
     genProfilePath="$profilesPath/home-manager"
     newGenPath="@GENERATION_DIR@";
+    newGenProfilePath="$profilesPath/home-manager-$newGenNum-link"
     newGenGcPath="$gcPath/current-home"
 
     local greatestGenNum
@@ -79,6 +95,7 @@ else
     $VERBOSE_ECHO "  oldGenPath undefined (first run?)"
 fi
 $VERBOSE_ECHO "  newGenPath=$newGenPath"
+$VERBOSE_ECHO "  newGenProfilePath=$newGenProfilePath"
 $VERBOSE_ECHO "  newGenNum=$newGenNum"
 $VERBOSE_ECHO "  newGenGcPath=$newGenGcPath"
 $VERBOSE_ECHO "  genProfilePath=$genProfilePath"

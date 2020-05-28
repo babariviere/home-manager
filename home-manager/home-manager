@@ -276,7 +276,7 @@ function doExpireGenerations() {
 
 function doListPackages() {
     local outPath
-    outPath="$(nix-env -q --out-path | grep -o '/.*home-manager-path$')"
+    outPath="$(nix profile info | grep -o '/.*home-manager-path$')"
     if [[ -n "$outPath" ]] ; then
         nix-store -q --references "$outPath" | sed 's/[^-]*-//'
     else

@@ -54,10 +54,10 @@ let
     options = {
       layout = mkOption {
         type = with types; nullOr str;
-        default =
-          if versionAtLeast config.home.stateVersion "19.09"
-          then null
-          else "us";
+        default = if versionAtLeast config.home.stateVersion "19.09" then
+          null
+        else
+          "us";
         defaultText = literalExample "null";
         description = ''
           Keyboard layout. If <literal>null</literal>, then the system
@@ -79,8 +79,8 @@ let
 
       options = mkOption {
         type = types.listOf types.str;
-        default = [];
-        example = ["grp:caps_toggle" "grp_led:scroll"];
+        default = [ ];
+        example = [ "grp:caps_toggle" "grp_led:scroll" ];
         description = ''
           X keyboard options; layout switching goes here.
         '';
@@ -89,9 +89,7 @@ let
       variant = mkOption {
         type = with types; nullOr str;
         default =
-          if versionAtLeast config.home.stateVersion "19.09"
-          then null
-          else "";
+          if versionAtLeast config.home.stateVersion "19.09" then null else "";
         defaultText = literalExample "null";
         example = "colemak";
         description = ''
@@ -105,9 +103,7 @@ let
     };
   };
 
-in
-
-{
+in {
   meta.maintainers = [ maintainers.rycee ];
 
   imports = [
@@ -156,13 +152,13 @@ in
 
     home.language = mkOption {
       type = languageSubModule;
-      default = {};
+      default = { };
       description = "Language configuration.";
     };
 
     home.keyboard = mkOption {
       type = types.nullOr keyboardSubModule;
-      default = {};
+      default = { };
       description = ''
         Keyboard configuration. Set to <literal>null</literal> to
         disable Home Manager keyboard management.
@@ -170,9 +166,12 @@ in
     };
 
     home.sessionVariables = mkOption {
-      default = {};
+      default = { };
       type = types.attrs;
-      example = { EDITOR = "emacs"; GS_OPTIONS = "-sPAPERSIZE=a4"; };
+      example = {
+        EDITOR = "emacs";
+        GS_OPTIONS = "-sPAPERSIZE=a4";
+      };
       description = ''
         Environment variables to always set at login.
         </para><para>
@@ -218,13 +217,13 @@ in
 
     home.packages = mkOption {
       type = types.listOf types.package;
-      default = [];
+      default = [ ];
       description = "The set of packages to appear in the user environment.";
     };
 
     home.extraOutputsToInstall = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       example = [ "doc" "info" "devdoc" ];
       description = ''
         List of additional package outputs of the packages
@@ -251,7 +250,7 @@ in
 
     home.activation = mkOption {
       type = hm.types.dagOf types.str;
-      default = {};
+      default = { };
       example = literalExample ''
         {
           myActivationAction = lib.hm.dag.entryAfter ["writeBoundary"] '''
@@ -335,48 +334,38 @@ in
       }
     ];
 
-    home.username =
-      mkIf (versionOlder config.home.stateVersion "20.09")
-        (mkDefault (builtins.getEnv "USER"));
-    home.homeDirectory =
-      mkIf (versionOlder config.home.stateVersion "20.09")
-        (mkDefault (builtins.getEnv "HOME"));
+    home.username = mkIf (versionOlder config.home.stateVersion "20.09")
+      (mkDefault (builtins.getEnv "USER"));
+    home.homeDirectory = mkIf (versionOlder config.home.stateVersion "20.09")
+      (mkDefault (builtins.getEnv "HOME"));
 
-    home.profileDirectory =
-      if config.submoduleSupport.enable
-        && config.submoduleSupport.externalPackageInstall
-      then config.home.path
-      else cfg.homeDirectory + "/.nix-profile";
+    home.profileDirectory = if config.submoduleSupport.enable
+    && config.submoduleSupport.externalPackageInstall then
+      config.home.path
+    else
+      cfg.homeDirectory + "/.nix-profile";
 
     home.sessionVariables =
-      let
-        maybeSet = n: v: optionalAttrs (v != null) { ${n} = v; };
-      in
-        (maybeSet "LANG" cfg.language.base)
-        //
-        (maybeSet "LC_ADDRESS" cfg.language.address)
-        //
-        (maybeSet "LC_MONETARY" cfg.language.monetary)
-        //
-        (maybeSet "LC_PAPER" cfg.language.paper)
-        //
-        (maybeSet "LC_TIME" cfg.language.time);
+      let maybeSet = n: v: optionalAttrs (v != null) { ${n} = v; };
+      in (maybeSet "LANG" cfg.language.base)
+      // (maybeSet "LC_ADDRESS" cfg.language.address)
+      // (maybeSet "LC_MONETARY" cfg.language.monetary)
+      // (maybeSet "LC_PAPER" cfg.language.paper)
+      // (maybeSet "LC_TIME" cfg.language.time);
 
     home.packages = [
       # Provide a file holding all session variables.
-      (
-        pkgs.writeTextFile {
-          name = "hm-session-vars.sh";
-          destination = "/etc/profile.d/hm-session-vars.sh";
-          text = ''
-            # Only source this once.
-            if [ -n "$__HM_SESS_VARS_SOURCED" ]; then return; fi
-            export __HM_SESS_VARS_SOURCED=1
+      (pkgs.writeTextFile {
+        name = "hm-session-vars.sh";
+        destination = "/etc/profile.d/hm-session-vars.sh";
+        text = ''
+          # Only source this once.
+          if [ -n "$__HM_SESS_VARS_SOURCED" ]; then return; fi
+          export __HM_SESS_VARS_SOURCED=1
 
-            ${config.lib.shell.exportAll cfg.sessionVariables}
-          '' + cfg.sessionVariablesExtra;
-        }
-      )
+          ${config.lib.shell.exportAll cfg.sessionVariables}
+        '' + cfg.sessionVariablesExtra;
+      })
     ];
 
     # A dummy entry acting as a boundary between the activation
@@ -398,83 +387,71 @@ in
     # In case the user has moved from a user-install of Home Manager
     # to a submodule managed one we attempt to uninstall the
     # `home-manager-path` package if it is installed.
-    home.activation.installPackages = hm.dag.entryAfter ["writeBoundary"] (
-      if config.submoduleSupport.externalPackageInstall
-      then
-        ''
-          if nix-env -q | grep '^home-manager-path$'; then
-            $DRY_RUN_CMD nix-env -e home-manager-path
-          fi
-        ''
+    home.activation.installPackages = hm.dag.entryAfter [ "writeBoundary" ]
+      (if config.submoduleSupport.externalPackageInstall then ''
+        if nix profile info | grep '^home-manager-path$'; then
+          $DRY_RUN_CMD nix profile uninstall home-manager-path
+        fi
+      '' else ''
+        $DRY_RUN_CMD nix profile -f ${cfg.path}
+      '');
+
+    home.activationPackage = let
+      mkCmd = res: ''
+        noteEcho Activating ${res.name}
+        ${res.data}
+      '';
+      sortedCommands = hm.dag.topoSort cfg.activation;
+      activationCmds = if sortedCommands ? result then
+        concatStringsSep "\n" (map mkCmd sortedCommands.result)
       else
-        ''
-          $DRY_RUN_CMD nix-env -i ${cfg.path}
-        ''
-    );
+        abort ("Dependency cycle in activation script: "
+          + builtins.toJSON sortedCommands);
 
-    home.activationPackage =
-      let
-        mkCmd = res: ''
-            noteEcho Activating ${res.name}
-            ${res.data}
-          '';
-        sortedCommands = hm.dag.topoSort cfg.activation;
-        activationCmds =
-          if sortedCommands ? result then
-            concatStringsSep "\n" (map mkCmd sortedCommands.result)
-          else
-            abort ("Dependency cycle in activation script: "
-              + builtins.toJSON sortedCommands);
+      # Programs that always should be available on the activation
+      # script's PATH.
+      activationBinPaths = lib.makeBinPath [
+        pkgs.bash
+        pkgs.coreutils
+        pkgs.diffutils # For `cmp` and `diff`.
+        pkgs.findutils
+        pkgs.gnugrep
+        pkgs.gnused
+        pkgs.ncurses # For `tput`.
+      ] + optionalString (!cfg.emptyActivationPath) "\${PATH:+:}$PATH";
 
-        # Programs that always should be available on the activation
-        # script's PATH.
-        activationBinPaths = lib.makeBinPath [
-          pkgs.bash
-          pkgs.coreutils
-          pkgs.diffutils        # For `cmp` and `diff`.
-          pkgs.findutils
-          pkgs.gnugrep
-          pkgs.gnused
-          pkgs.ncurses          # For `tput`.
-        ]
-        + optionalString (!cfg.emptyActivationPath) "\${PATH:+:}$PATH";
+      activationScript = pkgs.writeScript "activation-script" ''
+        #!${pkgs.runtimeShell}
 
-        activationScript = pkgs.writeScript "activation-script" ''
-          #!${pkgs.runtimeShell}
+        set -eu
+        set -o pipefail
 
-          set -eu
-          set -o pipefail
+        cd $HOME
 
-          cd $HOME
+        export PATH="${activationBinPaths}"
 
-          export PATH="${activationBinPaths}"
+        . ${./lib-bash/color-echo.sh}
 
-          . ${./lib-bash/color-echo.sh}
+        ${builtins.readFile ./lib-bash/activation-init.sh}
 
-          ${builtins.readFile ./lib-bash/activation-init.sh}
+        ${activationCmds}
+      '';
+    in pkgs.runCommand "home-manager-generation" {
+      preferLocalBuild = true;
+      allowSubstitutes = false;
+    } ''
+      mkdir -p $out
 
-          ${activationCmds}
-        '';
-      in
-        pkgs.runCommand
-          "home-manager-generation"
-          {
-            preferLocalBuild = true;
-            allowSubstitutes = false;
-          }
-          ''
-            mkdir -p $out
+      cp ${activationScript} $out/activate
 
-            cp ${activationScript} $out/activate
+      substituteInPlace $out/activate \
+        --subst-var-by GENERATION_DIR $out
 
-            substituteInPlace $out/activate \
-              --subst-var-by GENERATION_DIR $out
+      ln -s ${config.home-files} $out/home-files
+      ln -s ${cfg.path} $out/home-path
 
-            ln -s ${config.home-files} $out/home-files
-            ln -s ${cfg.path} $out/home-path
-
-            ${cfg.extraBuilderCommands}
-          '';
+      ${cfg.extraBuilderCommands}
+    '';
 
     home.path = pkgs.buildEnv {
       name = "home-manager-path";
